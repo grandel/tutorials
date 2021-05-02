@@ -157,11 +157,14 @@ class BalloonDataset(utils.Dataset):
         # [height, width, instance_count]
         info = self.image_info[image_id]
         mask = np.zeros([info["height"], info["width"], len(info["polygons"])],
-                        dtype=np.uint8)
+                        dtype=np.uint8)       
         for i, p in enumerate(info["polygons"]):
             # Get indexes of pixels inside the polygon and set them to 1
-            rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
-            mask[rr, cc, i] = 1
+            if i < mask.shape[2]:
+                rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
+                mask[rr, cc, i] = 1
+            else:
+                print("index out of bound of mask array")
 
         # Return mask, and array of class IDs of each instance. Since we have
         # one class ID only, we return an array of 1s
