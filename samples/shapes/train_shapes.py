@@ -8,7 +8,6 @@ import sys
 import numpy as np
 from matplotlib import pyplot as plt
 
-
 ROOT_DIR = os.path.abspath("../../")
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn import utils
@@ -16,8 +15,8 @@ import mrcnn.model as modellib
 from mrcnn import visualize
 from mrcnn.model import log
 
-from mrcnn.datasets import BalloonDataset, CocoLikeDataset
-from mrcnn.configs import BalloonConfig, ShapesConfig, InferenceConfig, CocoLikeConfig
+from mrcnn.datasets import CocoLikeDataset
+from mrcnn.configs import CocoLikeInferenceConfig, CocoLikeConfig
 
 
 def get_ax(rows=1, cols=1, size=8):
@@ -69,7 +68,7 @@ def train_heads(model, dataset_train, dataset_val, config):
     # Passing layers="heads" freezes all layers except the head
     # layers. You can also pass a regular expression to select
     # which layers to train by name pattern.
-    model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE, epochs=1, layers='heads')
+    model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE, epochs=100, layers='heads')
     return model
 
 
@@ -153,39 +152,18 @@ def evalute(model, config, dataset_val):
 def main():
     # Directory to save logs and trained model
     model_dir = os.path.join(ROOT_DIR, "logs")
-
-    # Local path to trained weights file
+    #
+    # # Local path to trained weights file
     coco_model_path = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
-    # Download COCO trained weights from Releases if needed
-    if not os.path.exists(coco_model_path):
-        utils.download_trained_weights(coco_model_path)
+    # # Download COCO trained weights from Releases if needed
+    # if not os.path.exists(coco_model_path):
+    #     utils.download_trained_weights(coco_model_path)
 
-    # config = ShapesConfig()
-    # config = BalloonConfig()
     config = CocoLikeConfig()
     config.display()
-
-    # Training dataset
-    # dataset_train = ShapesDataset()
-    # dataset_train.load_shapes(500, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
-    # dataset_train.prepare()
     #
-    # # Validation dataset
-    # dataset_val = ShapesDataset()
-    # dataset_val.load_shapes(50, config.IMAGE_SHAPE[0], config.IMAGE_SHAPE[1])
-    # dataset_val.prepare()
-
-    # baloon_dataset_dir = "./../../datasets/balloon"
-    # dataset_train = BalloonDataset()
-    # dataset_train.load_balloon(baloon_dataset_dir, "train")
-    # dataset_train.prepare()
     #
-    # # Validation dataset
-    # dataset_val = BalloonDataset()
-    # dataset_val.load_balloon(baloon_dataset_dir, "val")
-    # dataset_val.prepare()
-
-    logo_dataset_dir = "./../../datasets/logo2"
+    logo_dataset_dir = "./../../datasets/mga"
     logo_dataset_train_json = os.path.join(logo_dataset_dir, "train", "logo_train_coco.json")
     logo_dataset_train_images = os.path.join(logo_dataset_dir, "train", "images")
     dataset_train = CocoLikeDataset()
@@ -204,8 +182,9 @@ def main():
     model = create_model(model_dir, config, coco_model_path)
     model = train_heads(model, dataset_train, dataset_val, config)
     # model = train_all(model, dataset_train, dataset_val, config)
-    # inference_config = InferenceConfig()
-    # infere(inference_config, model_dir, dataset_train, dataset_val)
+    # inference_config = CocoLikeInferenceConfig()
+    # infere_model_dir = model_dir
+    # infere(inference_config, infere_model_dir, dataset_train, dataset_val)
     # evalute(model, config, dataset_val)
 
 

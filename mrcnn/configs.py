@@ -78,11 +78,11 @@ class CocoLikeConfig(Config):
     NUM_CLASSES = 1 + 1  # background + 1 (cig_butt)
 
     # All of our training images are 512x512
-    IMAGE_MIN_DIM = 512
-    IMAGE_MAX_DIM = 2048
+    IMAGE_MIN_DIM = 190
+    IMAGE_MAX_DIM = 1472
 
     # You can experiment with this number to see if it improves training
-    STEPS_PER_EPOCH = 10
+    STEPS_PER_EPOCH = 50
 
     # This is how often validation is run. If you are using too much hard drive space
     # on saved models (in the MODEL_DIR), try making this value larger.
@@ -96,3 +96,11 @@ class CocoLikeConfig(Config):
     MAX_GT_INSTANCES = 50
     POST_NMS_ROIS_INFERENCE = 500
     POST_NMS_ROIS_TRAINING = 1000
+
+
+class CocoLikeInferenceConfig(CocoLikeConfig):
+    GPU_COUNT = 1
+    IMAGES_PER_GPU = 1
+    IMAGE_MIN_DIM = 190
+    IMAGE_MAX_DIM = 1440
+    DETECTION_MIN_CONFIDENCE = 0.85
