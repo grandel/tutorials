@@ -63,12 +63,8 @@ class InferenceConfig(ShapesConfig):
 
 
 class CocoLikeConfig(Config):
-    """Configuration for training on the cigarette butts dataset.
-    Derives from the base Config class and overrides values specific
-    to the cigarette butts dataset.
-    """
     # Give the configuration a recognizable name
-    NAME = "cognifide_logo"
+    NAME = "mga-logo"
 
     # Train on 1 GPU and 1 image per GPU. Batch size is 1 (GPUs * images/GPU).
     GPU_COUNT = 1
@@ -82,11 +78,11 @@ class CocoLikeConfig(Config):
     IMAGE_MAX_DIM = 1472
 
     # You can experiment with this number to see if it improves training
-    STEPS_PER_EPOCH = 50
+    STEPS_PER_EPOCH = 500
 
     # This is how often validation is run. If you are using too much hard drive space
     # on saved models (in the MODEL_DIR), try making this value larger.
-    VALIDATION_STEPS = 5
+    VALIDATION_STEPS = 50
 
     # Matterport originally used resnet101, but I downsized to fit it on my graphics card
     BACKBONE = 'resnet50'
@@ -97,10 +93,18 @@ class CocoLikeConfig(Config):
     POST_NMS_ROIS_INFERENCE = 500
     POST_NMS_ROIS_TRAINING = 1000
 
+    LOSS_WEIGHTS = {
+        "rpn_class_loss": 1.,
+        "rpn_bbox_loss": 1.,
+        "mrcnn_class_loss": 1.,
+        "mrcnn_bbox_loss": 1.,
+        "mrcnn_mask_loss": 1.
+    }
+
 
 class CocoLikeInferenceConfig(CocoLikeConfig):
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
     IMAGE_MIN_DIM = 190
-    IMAGE_MAX_DIM = 1440
+    IMAGE_MAX_DIM = 1472
     DETECTION_MIN_CONFIDENCE = 0.85

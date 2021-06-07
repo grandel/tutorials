@@ -1,6 +1,7 @@
-#!/usr/bin/env python
+# !/usr/bin/env python
 # coding: utf-8
 
+import argparse
 import os
 import random
 import sys
@@ -8,7 +9,7 @@ import sys
 import numpy as np
 from matplotlib import pyplot as plt
 
-ROOT_DIR = os.path.abspath("../../")
+ROOT_DIR = os.path.abspath("./")
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn import utils
 import mrcnn.model as modellib
@@ -17,6 +18,10 @@ from mrcnn.model import log
 
 from mrcnn.datasets import CocoLikeDataset
 from mrcnn.configs import CocoLikeInferenceConfig, CocoLikeConfig
+import imgaug
+
+from keras.preprocessing.image import load_img
+from keras.preprocessing.image import img_to_array
 
 
 def get_ax(rows=1, cols=1, size=8):
@@ -40,9 +45,9 @@ def display_random_images(dataset_train):
         visualize.display_top_masks(image, mask, class_ids, dataset_train.class_names)
 
 
-def create_model(model_dir, config, coco_model_path):
+def create_model(model_dir, config, coco_model_path, mode="training"):
     # Create model in training mode
-    model = modellib.MaskRCNN(mode="training", config=config,
+    model = modellib.MaskRCNN(mode=mode, config=config,
                               model_dir=model_dir)
 
     # Which weights to start with?
@@ -68,7 +73,14 @@ def train_heads(model, dataset_train, dataset_val, config):
     # Passing layers="heads" freezes all layers except the head
     # layers. You can also pass a regular expression to select
     # which layers to train by name pattern.
-    model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE, epochs=100, layers='heads')
+    augmentation = imgaug.augmenters.Sometimes(0.5, [
+        imgaug.augmenters.Fliplr(0.5),
+        imgaug.augmenters.PerspectiveTransform(),
+        imgaug.augmenters.ElasticTransformation(),
+        imgaug.augmenters.GaussianBlur(sigma=(0.0, 5.0))
+    ])
+    model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE, epochs=80, layers='heads',
+                augmentation=augmentation)
     return model
 
 
@@ -77,7 +89,8 @@ def train_all(model, dataset_train, dataset_val, config):
     # Passing layers="all" trains all layers. You can also
     # pass a regular expression to select which layers to
     # train by name pattern.
-    model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE / 10, epochs=2, layers="all")
+    model.train(dataset_train, dataset_val, learning_rate=config.LEARNING_RATE / 10, epochs=20, layers="3+")
+    return model
 
 
 # Save weights
@@ -85,7 +98,7 @@ def train_all(model, dataset_train, dataset_val, config):
 # Uncomment to save manually
 
 
-def save_model(model, model_dir, model_name="mask_rcnn_shapes.h5"):
+def save_model(model, model_dir, model_name="mask_rcnn_mga.h5"):
     model_path = os.path.join(model_dir, model_name)
     model.keras_model.save_weights(model_path)
 
@@ -98,8 +111,8 @@ def infere(config, model_dir, dataset_train, dataset_val):
 
     # Get path to saved weights
     # Either set a specific path or find last trained weights
-    # model_path = os.path.join(ROOT_DIR, ".h5 file name here")
-    model_path = model.find_last()
+    model_path = os.path.join("./../../logs/mga-logo20210529T0117/", "mask_rcnn_mga-logo_0080.h5")
+    # model_path = model.find_last()
 
     # Load trained weights
     print("Loading weights from ", model_path)
@@ -124,6 +137,32 @@ def infere(config, model_dir, dataset_train, dataset_val):
     r = results[0]
     visualize.display_instances(original_image, r['rois'], r['masks'], r['class_ids'], dataset_val.class_names,
                                 r['scores'], ax=get_ax())
+
+
+def infere_single_image(config, model_dir, dataset_train, input_dir):
+    # Recreate the model in inference mode
+    model = modellib.MaskRCNN(mode="inference",
+                              config=config,
+                              model_dir=model_dir)
+
+    # Get path to saved weights
+    # Either set a specific path or find last trained weights
+    model_path = os.path.join("./logs/mga-logo20210529T0117/", "mask_rcnn_mga-logo_0080.h5")
+    # model_path = model.find_last()
+
+    # Load trained weights
+    print("Loading weights from ", model_path)
+    model.load_weights(model_path, by_name=True)
+
+    for file in os.listdir(input_dir):
+        file_name = os.path.join(input_dir, file)
+        original_image = load_img(file_name)
+        original_image = img_to_array(original_image)
+        results = model.detect([original_image], verbose=1)
+        r = results[0]
+        visualize.save_instances(file_name, original_image, r['rois'], r['masks'], r['class_ids'],
+                                 dataset_train.class_names,
+                                 r['scores'], ax=get_ax())
 
 
 # ## Evaluation
@@ -156,11 +195,11 @@ def main():
     # # Local path to trained weights file
     coco_model_path = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
     # # Download COCO trained weights from Releases if needed
-    # if not os.path.exists(coco_model_path):
-    #     utils.download_trained_weights(coco_model_path)
+    if not os.path.exists(coco_model_path):
+        utils.download_trained_weights(coco_model_path)
 
-    config = CocoLikeConfig()
-    config.display()
+    # config = CocoLikeConfig()
+    # config.display()
     #
     #
     logo_dataset_dir = "./../../datasets/mga"
@@ -179,14 +218,102 @@ def main():
 
     # display_random_images(dataset_train)
 
+    # last_coco_model_path = "./../../logs/mga-logo20210503T2026"
+    # model = create_model(model_dir, config, last_coco_model_path)
+    # model = create_model(model_dir, config, model_dir)
+    # model = train_heads(model, dataset_train, dataset_val, config)
+    # model = train_all(model, dataset_train, dataset_val, config)
+    # save_model(model, model_dir)
+    inference_config = CocoLikeInferenceConfig()
+    inference_config.display()
+    # infere_model_dir = model_dir
+    # infere(inference_config, infere_model_dir, dataset_train, dataset_val)
+
+    # last_coco_model_path = "./../../logs/mga-logo20210503T2026"
+    last_coco_model_path = model_dir
+    model = create_model(model_dir, inference_config, last_coco_model_path, "inference")
+    evalute(model, inference_config, dataset_val)
+
+
+def inference():
+    logo_dataset_dir = "./datasets/mga3"
+    logo_dataset_train_json = os.path.join(logo_dataset_dir, "train", "logo_train_coco.json")
+    logo_dataset_train_images = os.path.join(logo_dataset_dir, "train", "images")
+    dataset_train = CocoLikeDataset()
+    dataset_train.load_data(logo_dataset_train_json, logo_dataset_train_images)
+    dataset_train.prepare()
+
+    # Validation dataset
+    logo_dataset_val_json = os.path.join(logo_dataset_dir, "val", "logo_val_coco.json")
+    logo_dataset_val_images = os.path.join(logo_dataset_dir, "val", "images")
+    dataset_val = CocoLikeDataset()
+    dataset_val.load_data(logo_dataset_val_json, logo_dataset_val_images)
+    dataset_val.prepare()
+
+    model_dir = os.path.join(ROOT_DIR, "logs")
+    inference_config = CocoLikeInferenceConfig()
+    inference_config.display()
+    # infere_model_dir = model_dir
+    infere_model_dir = "./../../logs"
+    infere_single_image(inference_config, infere_model_dir, dataset_train, "./inference/input")
+
+
+def train():
+    model_dir = os.path.join(ROOT_DIR, "logs")
+    coco_model_path = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
+    # # Download COCO trained weights from Releases if needed
+    # if not os.path.exists(coco_model_path):
+    #     utils.download_trained_weights(coco_model_path)
+    config = CocoLikeConfig()
+    config.display()
+    logo_dataset_dir = "./datasets/mga3"
+    logo_dataset_train_json = os.path.join(logo_dataset_dir, "train", "logo_train_coco.json")
+    logo_dataset_train_images = os.path.join(logo_dataset_dir, "train", "images")
+    dataset_train = CocoLikeDataset()
+    dataset_train.load_data(logo_dataset_train_json, logo_dataset_train_images)
+    dataset_train.prepare()
+
+    # Validation dataset
+    logo_dataset_val_json = os.path.join(logo_dataset_dir, "val", "logo_val_coco.json")
+    logo_dataset_val_images = os.path.join(logo_dataset_dir, "val", "images")
+    dataset_val = CocoLikeDataset()
+    dataset_val.load_data(logo_dataset_val_json, logo_dataset_val_images)
+    dataset_val.prepare()
+
     model = create_model(model_dir, config, coco_model_path)
     model = train_heads(model, dataset_train, dataset_val, config)
     # model = train_all(model, dataset_train, dataset_val, config)
-    # inference_config = CocoLikeInferenceConfig()
-    # infere_model_dir = model_dir
-    # infere(inference_config, infere_model_dir, dataset_train, dataset_val)
-    # evalute(model, config, dataset_val)
+
+
+def evaluate():
+    model_dir = os.path.join(ROOT_DIR, "logs")
+    inference_config = CocoLikeInferenceConfig()
+    inference_config.display()
+
+    logo_dataset_dir = "./datasets/mga"
+    logo_dataset_val_json = os.path.join(logo_dataset_dir, "val", "logo_val_coco.json")
+    logo_dataset_val_images = os.path.join(logo_dataset_dir, "val", "images")
+    dataset_val = CocoLikeDataset()
+    dataset_val.load_data(logo_dataset_val_json, logo_dataset_val_images)
+    dataset_val.prepare()
+
+    last_coco_model_path = "./logs/mga-logo20210505T1214"
+    model = create_model(model_dir, inference_config, last_coco_model_path, "inference")
+    evalute(model, inference_config, dataset_val)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--train', action="store_true")
+    group.add_argument('--infere', action="store_true")
+    args = parser.parse_args()
+
+    # main()
+    if args.train:
+        train()
+    if args.infere:
+        inference()
+
+    # evaluate()
+    pass

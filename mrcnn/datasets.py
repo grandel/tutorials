@@ -93,6 +93,7 @@ class BalloonDataset(utils.Dataset):
         for i, p in enumerate(info["polygons"]):
             # Get indexes of pixels inside the polygon and set them to 1
             try:
+                # TODO
                 rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
                 mask[rr, cc, i] = 1
             except Exception as e:
